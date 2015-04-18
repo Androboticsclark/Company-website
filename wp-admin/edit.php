@@ -280,4 +280,55 @@ echo esc_html( $post_type_object->labels->name );
 if ( current_user_can( $post_type_object->cap->create_posts ) )
 	echo ' <a href="' . esc_url( admin_url( $post_new_file ) ) . '" class="add-new-h2">' . esc_html( $post_type_object->labels->add_new ) . '</a>';
 if ( ! empty( $_REQUEST['s'] ) )
-	printf( ' <span class="subtitle">' . __('Search results for &#8220;%s
+	printf( ' <span class="subtitle">' . __('Search results for &#8220;%s&#8221;') . '</span>', get_search_query() );
+?></h2>
+
+<?php
+// If we have a bulk message to issue:
+$messages = array();
+foreach ( $bulk_counts as $message => $count ) {
+	if ( isset( $bulk_messages[ $post_type ][ $message ] ) )
+		$messages[] = sprintf( $bulk_messages[ $post_type ][ $message ], number_format_i18n( $count ) );
+	elseif ( isset( $bulk_messages['post'][ $message ] ) )
+		$messages[] = sprintf( $bulk_messages['post'][ $message ], number_format_i18n( $count ) );
+
+	if ( $message == 'trashed' && isset( $_REQUEST['ids'] ) ) {
+		$ids = preg_replace( '/[^0-9,]/', '', $_REQUEST['ids'] );
+		$messages[] = '<a href="' . esc_url( wp_nonce_url( "edit.php?post_type=$post_type&doaction=undo&action=untrash&ids=$ids", "bulk-posts" ) ) . '">' . __('Undo') . '</a>';
+	}
+}
+
+if ( $messages )
+	echo '<div id="message" class="updated"><p>' . join( ' ', $messages ) . '</p></div>';
+unset( $messages );
+
+$_SERVER['REQUEST_URI'] = remove_query_arg( array( 'locked', 'skipped', 'updated', 'deleted', 'trashed', 'untrashed' ), $_SERVER['REQUEST_URI'] );
+?>
+
+<?php $wp_list_table->views(); ?>
+
+<form id="posts-filter" action="" method="get">
+
+<?php $wp_list_table->search_box( $post_type_object->labels->search_items, 'post' ); ?>
+
+<input type="hidden" name="post_status" class="post_status_page" value="<?php echo !empty($_REQUEST['post_status']) ? esc_attr($_REQUEST['post_status']) : 'all'; ?>" />
+<input type="hidden" name="post_type" class="post_type_page" value="<?php echo $post_type; ?>" />
+<?php if ( ! empty( $_REQUEST['show_sticky'] ) ) { ?>
+<input type="hidden" name="show_sticky" value="1" />
+<?php } ?>
+
+<?php $wp_list_table->display(); ?>
+
+</form>
+
+<?php
+if ( $wp_list_table->has_items() )
+	$wp_list_table->inline_edit();
+?>
+
+<div id="ajax-response"></div>
+<br class="clear" />
+</div>
+
+<?php
+include( ABSPATH . 'wp-admin/admin-footer.php' );
